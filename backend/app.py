@@ -16,29 +16,44 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 json_file_path = os.path.join(current_directory, 'init.json')
 
 # Assuming your JSON data is stored in a file named 'init.json'
-with open(json_file_path, 'r') as file:
-    data = json.load(file)
-    episodes_df = pd.DataFrame(data['episodes'])
-    reviews_df = pd.DataFrame(data['reviews'])
+with open("letterboxd_reviews.json", "r", encoding="utf-8") as file:
+    movie_reviews = json.load(file)
+    reviews_df = pd.DataFrame(movie_reviews)
 
 app = Flask(__name__)
 CORS(app)
 
 # Sample search using json with pandas
 def json_search(query):
-    matches = []
-    merged_df = pd.merge(episodes_df, reviews_df, left_on='id', right_on='id', how='inner')
-    matches = merged_df[merged_df['title'].str.lower().str.contains(query.lower())]
-    matches_filtered = matches[['title', 'descr', 'imdb_rating']]
-    matches_filtered_json = matches_filtered.to_json(orient='records')
-    return matches_filtered_json
+    matches = reviews_df[
+        reviews_df['title'].str.lower().str.contains(query.lower()) |
+        reviews_df['review'].str.lower().str.contains(query.lower())
+    ].copy()  # Explicitly create a copy to avoid warnings
+
+    # Ensure all required fields exist and handle missing values
+    if 'genre' not in matches.columns:
+        matches['genre'] = "Unknown"  # Set default genre if missing
+    
+    if 'review' in matches.columns:
+        matches.rename(columns={'review': 'description'}, inplace=True)
+    else:
+        matches['description'] = "No description available."
+
+    if 'rating' in matches.columns:
+        matches.rename(columns={'rating': 'imdb_rating'}, inplace=True)
+    else:
+        matches['imdb_rating'] = "N/A"
+    
+    matches_filtered = matches[['title', 'year', 'genre', 'description', 'imdb_rating']]
+    
+    return matches_filtered.to_json(orient='records', force_ascii=False)
 
 @app.route("/")
 def home():
     return render_template('base.html',title="sample html")
 
-@app.route("/episodes")
-def episodes_search():
+@app.route("/movies")
+def movie_search():
     text = request.args.get("title")
     return json_search(text)
 
