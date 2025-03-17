@@ -4,6 +4,7 @@ from flask import Flask, render_template, request
 from flask_cors import CORS
 from helpers.MySQLDatabaseHandler import MySQLDatabaseHandler
 import pandas as pd
+import re
 
 # ROOT_PATH for linking with all your files. 
 # Feel free to use a config.py or settings.py with a global export variable
@@ -29,7 +30,6 @@ def json_search(query):
         reviews_df['title'].str.lower().str.contains(query.lower()) |
         reviews_df['review'].str.lower().str.contains(query.lower())
     ].copy()  # Explicitly create a copy to avoid warnings
-
     # Ensure all required fields exist and handle missing values
     if 'genre' not in matches.columns:
         matches['genre'] = "Unknown"  # Set default genre if missing
@@ -43,9 +43,10 @@ def json_search(query):
         matches.rename(columns={'rating': 'imdb_rating'}, inplace=True)
     else:
         matches['imdb_rating'] = "N/A"
-    
+
+    matches["title"] = matches["title"].apply(lambda x: re.sub(r"\([0-9]{4}\)", "", x))
+
     matches_filtered = matches[['title', 'year', 'genre', 'description', 'imdb_rating']]
-    
     return matches_filtered.to_json(orient='records', force_ascii=False)
 
 @app.route("/")
