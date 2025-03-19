@@ -25,12 +25,14 @@ app = Flask(__name__)
 CORS(app)
 
 # Sample search using json with pandas
-def json_search(query):
+def json_search(query1, query2, query3):
+    query = query1 + query2 + query3
     matches = reviews_df[
         reviews_df['title'].str.lower().str.contains(query.lower()) |
         reviews_df['review'].str.lower().str.contains(query.lower())
     ].copy()  # Explicitly create a copy to avoid warnings
     # Ensure all required fields exist and handle missing values
+    
     if 'genre' not in matches.columns:
         matches['genre'] = "Unknown"  # Set default genre if missing
     
@@ -55,8 +57,9 @@ def home():
 
 @app.route("/movies")
 def movie_search():
-    text = request.args.get("title")
-    return json_search(text)
+    text1, text2, text3 = [request.args.get(
+        title) for title in ("title1", "title2", "title3")]
+    return json_search(text1, text2, text3)
 
 if 'DB_NAME' not in os.environ:
     app.run(debug=True,host="0.0.0.0",port=5000)

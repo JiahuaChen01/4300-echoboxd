@@ -16,11 +16,27 @@
         <h1 id="google-0-1">0</h1>
         <h1 id="google-0-2">0</h1>
       </div>
-      <div class="input-box" onclick="sendFocus()">
+      <div class="input-box" onclick="sendFocus1()">
         <img src="{{ url_for('static', filename='images/mag.png') }}" />
         <input
           placeholder="Search for a movie"
-          id="filter-text-val"
+          id="filter-text-val1"
+          onkeyup="filterText()"
+        />
+      </div>
+      <div class="input-box" onclick="sendFocus2()">
+        <img src="{{ url_for('static', filename='images/mag.png') }}" />
+        <input
+          placeholder="Search for a movie"
+          id="filter-text-val2"
+          onkeyup="filterText()"
+        />
+      </div>
+      <div class="input-box" onclick="sendFocus3()">
+        <img src="{{ url_for('static', filename='images/mag.png') }}" />
+        <input
+          placeholder="Search for a movie"
+          id="filter-text-val3"
           onkeyup="filterText()"
         />
       </div>
@@ -46,17 +62,27 @@
   </div>`;
     }
 
-    function sendFocus() {
-      document.getElementById("filter-text-val").focus();
+    function sendFocus1() {
+      document.getElementById("filter-text-val1").focus();
     }
+    function sendFocus2() {
+      document.getElementById("filter-text-val2").focus();
+    }
+
+    function sendFocus3() {
+      document.getElementById("filter-text-val3").focus();
+    }
+
 
     function filterText() {
       document.getElementById("answer-box").innerHTML = "";
-      console.log(document.getElementById("filter-text-val").value);
+      console.log(document.getElementById("filter-text-val1").value);
       fetch(
         "/movies?" +
           new URLSearchParams({
-            title: document.getElementById("filter-text-val").value,
+            title1: document.getElementById("filter-text-val1").value,
+            title2: document.getElementById("filter-text-val2").value,
+            title3: document.getElementById("filter-text-val3").value,
           }).toString()
       )
         .then((response) => response.json())
