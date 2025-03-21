@@ -1,1 +1,0 @@
-This is the venv for INFO 4300 Final Project
