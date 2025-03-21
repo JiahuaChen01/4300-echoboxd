@@ -27,29 +27,29 @@ CORS(app)
 
 # Sample search using json with pandas
 def json_search(query1, query2, query3):
-    query = query1 + query2 + query3
-    matches = reviews_df[
-        reviews_df['title'].str.lower().str.contains(query.lower()) |
-        reviews_df['review'].str.lower().str.contains(query.lower())
-    ].copy()  # Explicitly create a copy to avoid warnings
-    # Ensure all required fields exist and handle missing values
-    
-    if 'genre' not in matches.columns:
-        matches['genre'] = "Unknown"  # Set default genre if missing
-    
-    if 'review' in matches.columns:
-        matches.rename(columns={'review': 'description'}, inplace=True)
-    else:
-        matches['description'] = "No description available."
+    # Combine and tokenize user input
+    combined_query = f"{query1} {query2} {query3}"
+    query_tokens = sim.tokenize(combined_query)
 
-    if 'rating' in matches.columns:
-        matches.rename(columns={'rating': 'imdb_rating'}, inplace=True)
-    else:
-        matches['imdb_rating'] = "N/A"
+    # Tokenize all reviews if not already done
+    reviews_df['toks'] = reviews_df['review'].apply(sim.tokenize)
 
-    matches["title"] = matches["title"].apply(lambda x: re.sub(r"\([0-9]{4}\)", "", x))
+    # Score each review based on how many query tokens it contains
+    def score_row(tokens):
+        return sum(1 for token in query_tokens if token in tokens)
 
-    matches_filtered = matches[['title', 'year', 'genre', 'description', 'imdb_rating']]
+    reviews_df['match_score'] = reviews_df['toks'].apply(score_row)
+
+    # Sort by score and get top 10
+    top_reviews = reviews_df.sort_values(by='match_score', ascending=False).head(10).copy()
+
+    # Format and rename for frontend
+    if 'genre' not in top_reviews.columns:
+        top_reviews['genre'] = "Unknown"
+    top_reviews.rename(columns={'review': 'description', 'rating': 'imdb_rating'}, inplace=True)
+    top_reviews["title"] = top_reviews["title"].apply(lambda x: re.sub(r"\([0-9]{4}\)", "", x))
+
+    matches_filtered = top_reviews[['title', 'year', 'genre', 'description', 'imdb_rating']]
     return matches_filtered.to_json(orient='records', force_ascii=False)
 
 @app.route("/")

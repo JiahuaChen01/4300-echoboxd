@@ -1,8 +1,10 @@
 import numpy as np
-import regex as re
+import re
 
 def tokenize(review: str):
-    return [tok for tok in re.findall(r"[A-Za-z']+",review.lower())]
+    if not isinstance(review, str):
+        return []
+    return [tok for tok in re.findall(r"[A-Za-z']+", review.lower())]
 
 def build_inverted_index(data: list[dict]) -> dict:
     idx = {}
