@@ -1,104 +1,94 @@
 <!DOCTYPE html>
-<title>{% block title %}{% endblock %} - Flaskr</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link
-  href="https://fonts.googleapis.com/css2?family=Kanit&family=Montserrat&family=Open+Sans:wght@500&display=swap"
-  rel="stylesheet"
-/>
-<body>
-  <div class="full-body-container">
-    <div class="top-text">
-      <div class="google-colors">
-        <h1 id="google-4">4</h1>
-        <h1 id="google-3">3</h1>
-        <h1 id="google-0-1">0</h1>
-        <h1 id="google-0-2">0</h1>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Movie Night Recommender</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Kanit:wght@500&family=Montserrat&family=Open+Sans:wght@500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="full-body-container">
+      <h1 class="title">EchoBoxd</h1>
+
+      <div class="input-container">
+        <div class="input-box">
+          <input
+            placeholder="User 1 - Enter a keyword..."
+            id="filter-text-val1"
+          />
+        </div>
+        <div class="input-box">
+          <input
+            placeholder="User 2 - Enter a keyword..."
+            id="filter-text-val2"
+          />
+        </div>
+        <div class="input-box">
+          <input
+            placeholder="User 3 - Enter a keyword..."
+            id="filter-text-val3"
+          />
+        </div>
       </div>
-      <div class="input-box" onclick="sendFocus1()">
-        <img src="{{ url_for('static', filename='images/mag.png') }}" />
-        <input
-          placeholder="Search for a movie"
-          id="filter-text-val1"
-          onkeyup="filterText()"
-        />
-      </div>
-      <div class="input-box" onclick="sendFocus2()">
-        <img src="{{ url_for('static', filename='images/mag.png') }}" />
-        <input
-          placeholder="Search for a movie"
-          id="filter-text-val2"
-          onkeyup="filterText()"
-        />
-      </div>
-      <div class="input-box" onclick="sendFocus3()">
-        <img src="{{ url_for('static', filename='images/mag.png') }}" />
-        <input
-          placeholder="Search for a movie"
-          id="filter-text-val3"
-          onkeyup="filterText()"
-        />
-      </div>
+
+      <button class="search-button" onclick="filterText()">
+        Get Recommendations
+      </button>
+
+      <div id="answer-box"></div>
     </div>
-    <div id="answer-box"></div>
-  </div>
 
-  <script>
-    function answerBoxTemplate(movie) {
-      return `<div class='movie-card'>
-    <h3 class='movie-title'>${movie.title} (${
-        movie.year || "Unknown Year"
-      })</h3>
-    <p class='movie-genre'><strong>Genre:</strong> ${
-      movie.genre || "Not Available"
-    }</p>
-    <p class='movie-desc'>${
-      movie.description || "No description available."
-    }</p>
-    <p class='movie-rating'><strong>IMDB Rating:</strong> ${
-      movie.imdb_rating || "N/A"
-    }</p>
-  </div>`;
-    }
+    <script>
+      function answerBoxTemplate(movie) {
+        return `<div class='movie-card'>
+                <h3 class='movie-title'>${movie.title} (${
+          movie.year || "Unknown Year"
+        })</h3>
+                <p class='movie-genre'><strong>Genre:</strong> ${
+                  movie.genre || "Not Available"
+                }</p>
+                <p class='movie-desc'>${
+                  movie.description || "No description available."
+                }</p>
+                <p class='movie-rating'><strong>IMDB Rating:</strong> ${
+                  movie.imdb_rating || "N/A"
+                }</p>
+            </div>`;
+      }
 
-    function sendFocus1() {
-      document.getElementById("filter-text-val1").focus();
-    }
-    function sendFocus2() {
-      document.getElementById("filter-text-val2").focus();
-    }
-
-    function sendFocus3() {
-      document.getElementById("filter-text-val3").focus();
-    }
-
-
-    function filterText() {
-      document.getElementById("answer-box").innerHTML = "";
-      console.log(document.getElementById("filter-text-val1").value);
-      fetch(
-        "/movies?" +
-          new URLSearchParams({
-            title1: document.getElementById("filter-text-val1").value,
-            title2: document.getElementById("filter-text-val2").value,
-            title3: document.getElementById("filter-text-val3").value,
-          }).toString()
-      )
-        .then((response) => response.json())
-        .then((data) => {
-          document.getElementById("answer-box").innerHTML = "";
-          if (data.length === 0) {
-            document.getElementById("answer-box").innerHTML =
-              "<p>No movies found.</p>";
-          } else {
-            data.forEach((movie) => {
-              let tempDiv = document.createElement("div");
-              tempDiv.innerHTML = answerBoxTemplate(movie);
-              document.getElementById("answer-box").appendChild(tempDiv);
-            });
-          }
-        });
-    }
-  </script>
-</body>
+      function filterText() {
+        fetch(
+          "/movies?" +
+            new URLSearchParams({
+              title1: document.getElementById("filter-text-val1").value,
+              title2: document.getElementById("filter-text-val2").value,
+              title3: document.getElementById("filter-text-val3").value,
+            }).toString()
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            document.getElementById("answer-box").innerHTML = "";
+            if (data.length === 0) {
+              document.getElementById("answer-box").innerHTML =
+                "<p>No movies found.</p>";
+            } else {
+              data.forEach((movie) => {
+                let tempDiv = document.createElement("div");
+                tempDiv.innerHTML = answerBoxTemplate(movie);
+                document.getElementById("answer-box").appendChild(tempDiv);
+              });
+            }
+          });
+      }
+    </script>
+  </body>
+</html>
