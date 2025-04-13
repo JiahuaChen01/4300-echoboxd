@@ -6,6 +6,8 @@ from helpers.MySQLDatabaseHandler import MySQLDatabaseHandler
 import similarity as sim
 import pandas as pd
 import re
+from tfidf_utils import compute_tf, compute_idf, compute_tf_idf, cosine_similarity
+
 
 # ROOT_PATH for linking with all your files. 
 # Feel free to use a config.py or settings.py with a global export variable
@@ -25,33 +27,27 @@ with open("letterboxd_reviews.json", "r", encoding="utf-8") as file:
 app = Flask(__name__)
 CORS(app)
 
-# Sample search using json with pandas
 def json_search(query1, query2, query3):
-    # Combine and tokenize user input
-    combined_query = f"{query1} {query2} {query3}"
+    combined_query = f"{query1} {query2} {query3}".strip()
     query_tokens = sim.tokenize(combined_query)
 
-    # Tokenize all reviews if not already done
-    reviews_df['toks'] = reviews_df['review'].apply(sim.tokenize)
+    valid_df = reviews_df.dropna(subset=["review"]).copy()
+    valid_df['toks'] = valid_df['review'].apply(sim.tokenize)
 
-    # Score each review based on how many query tokens it contains
-    def score_row(tokens):
-        return sum(1 for token in query_tokens if token in tokens)
+    docs = valid_df['toks'].tolist()
+    idf = compute_idf(docs)
+    doc_vecs = [compute_tf_idf(compute_tf(doc), idf) for doc in docs]
+    query_vec = compute_tf_idf(compute_tf(query_tokens), idf)
 
-    reviews_df['match_score'] = reviews_df['toks'].apply(score_row)
+    valid_df['score'] = [cosine_similarity(query_vec, doc_vec) for doc_vec in doc_vecs]
+    top = valid_df.sort_values('score', ascending=False).head(10).copy()
 
-    # Sort by score and get top 10
-    top_reviews = reviews_df.sort_values(by='match_score', ascending=False).head(10).copy()
+    if 'genre' not in top.columns:
+        top['genre'] = "Unknown"
+    top.rename(columns={'review': 'description', 'rating': 'imdb_rating'}, inplace=True)
+    top['title'] = top['title'].apply(lambda x: re.sub(r"\([0-9]{4}\)", "", x))
 
-    # Format and rename for frontend
-    if 'genre' not in top_reviews.columns:
-        top_reviews['genre'] = "Unknown"
-    top_reviews.rename(columns={'review': 'description', 'rating': 'imdb_rating'}, inplace=True)
-    top_reviews["title"] = top_reviews["title"].apply(lambda x: re.sub(r"\([0-9]{4}\)", "", x))
-
-    matches_filtered = top_reviews[['title', 'year', 'genre', 'description', 'imdb_rating']]
-    return matches_filtered.to_json(orient='records', force_ascii=False)
-
+    return top[['title', 'year', 'genre', 'description', 'imdb_rating']].to_json(orient='records', force_ascii=False)
 @app.route("/")
 def home():
     return render_template('base.html',title="sample html")
