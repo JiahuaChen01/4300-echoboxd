@@ -24,10 +24,6 @@ with open("letterboxd_reviews.json", "r", encoding="utf-8") as file:
     movie_reviews = json.load(file)
     reviews_df = pd.DataFrame(movie_reviews)
 
-with open("metacritic_reviews.json", "r", encoding="utf-8") as file:
-    metacritic_summaries = json.load(file)
-    metacritic_df = pd.DataFrame(metacritic_summaries)
-
 app = Flask(__name__)
 CORS(app)
 
@@ -36,12 +32,9 @@ def json_search(query1, query2, query3):
     query_tokens = sim.tokenize(combined_query)
 
     valid_df = reviews_df.dropna(subset=["review"]).copy()
-    metacritic_valid_df = metacritic_df.dropna(subset=["summary"]).copy()
     valid_df['toks'] = valid_df['review'].apply(sim.tokenize)
-    metacritic_valid_df['toks'] = metacritic_valid_df['summary'].apply(sim.tokenize)
 
     docs = valid_df['toks'].tolist()
-    docs.append(metacritic_valid_df['toks'].tolist())
     idf = compute_idf(docs)
     doc_vecs = [compute_tf_idf(compute_tf(doc), idf) for doc in docs]
     query_vec = compute_tf_idf(compute_tf(query_tokens), idf)
@@ -52,7 +45,6 @@ def json_search(query1, query2, query3):
     if 'genre' not in top.columns:
         top['genre'] = "Unknown"
     top.rename(columns={'review': 'description', 'rating': 'imdb_rating'}, inplace=True)
-    top.rename(columns={'summary': 'description', 'User rating': 'imdb_rating', 'Movie name': 'title', 'Release Date': 'year'}, inplace=True)
     top['title'] = top['title'].apply(lambda x: re.sub(r"\([0-9]{4}\)", "", x))
 
     return top[['title', 'year', 'genre', 'description', 'imdb_rating']].to_json(orient='records', force_ascii=False)
