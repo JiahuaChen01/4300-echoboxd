@@ -31,6 +31,13 @@ with open("metacritic-reviews.json", "r", encoding="utf-8") as file1:
     metacritic_df.drop(columns={'Rating', 'Website rating'})
     reviews_df = pd.concat([reviews_df, metacritic_df], ignore_index=True)
 
+with open("tmdb_5000_movies.json", "r", encoding="utf-8") as file2:
+    tmdb_overviews = json.load(file2)
+    tmdb_df = pd.DataFrame(tmdb_overviews)
+    tmdb_df.rename(columns={'overview': 'review', 'release_date': 'year', 'vote_average': 'rating'}, inplace=True)
+    tmdb_df.drop(columns={'keywords', 'original_title', 'tagline'})
+    reviews_df = pd.concat([reviews_df, tmdb_df], ignore_index=True)
+
 app = Flask(__name__)
 CORS(app)
 
