@@ -24,8 +24,8 @@ with open("letterboxd_reviews.json", "r", encoding="utf-8") as file:
     movie_reviews = json.load(file)
     reviews_df = pd.DataFrame(movie_reviews)
 
-with open("metacritic_reviews.json", "r", encoding="utf-8") as file:
-    metacritic_summaries = json.load(file)
+with open("metacritic_reviews.json", "r", encoding="utf-8") as file1:
+    metacritic_summaries = json.load(file1)
     metacritic_df = pd.DataFrame(metacritic_summaries)
     metacritic_df.rename(columns={'summary': 'review'})
     reviews_df = pd.concat([reviews_df, metacritic_df], ignore_index=True)
