@@ -27,7 +27,8 @@ with open("letterboxd_reviews.json", "r", encoding="utf-8") as file:
 with open("metacritic-reviews.json", "r", encoding="utf-8") as file1:
     metacritic_summaries = json.load(file1)
     metacritic_df = pd.DataFrame(metacritic_summaries)
-    metacritic_df.rename(columns={'summary': 'review'})
+    metacritic_df.rename(columns={'summary': 'review', 'User rating': 'rating', 'Movie name': 'title', 'Release Date': 'year'}, inplace=True)
+    metacritic_df.drop(columns={'Rating', 'Website rating'})
     reviews_df = pd.concat([reviews_df, metacritic_df], ignore_index=True)
 
 app = Flask(__name__)
@@ -51,7 +52,6 @@ def json_search(query1, query2, query3):
     if 'genre' not in top.columns:
         top['genre'] = "Unknown"
     top.rename(columns={'review': 'description', 'rating': 'imdb_rating'}, inplace=True)
-    top.rename(columns={'User rating': 'imdb_rating', 'Movie name': 'title', 'Release Date': 'year'}, inplace=True)
     top['title'] = top['title'].apply(lambda x: re.sub(r"\([0-9]{4}\)", "", x))
 
     return top[['title', 'year', 'genre', 'description', 'imdb_rating']].to_json(orient='records', force_ascii=False)
