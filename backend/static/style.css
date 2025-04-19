@@ -1,6 +1,6 @@
 body {
   font-family: "Montserrat", sans-serif;
-  background-color: #1e1e1e;
+  background-color: #14181c;
   color: white;
   text-align: center;
   margin: 0;
@@ -21,6 +21,7 @@ body {
   font-family: "Kanit", sans-serif;
   font-size: 32px;
   margin-bottom: 20px;
+  color: #90ee90;
 }
 
 .input-container {
@@ -34,7 +35,7 @@ body {
   width: 400px;
   padding: 12px;
   border-radius: 25px;
-  border: 2px solid #f4b400;
+  border: 2px solid #40bcf4;
   background-color: #2c2c2c;
   display: flex;
   align-items: center;
@@ -76,7 +77,7 @@ body {
 }
 
 .movie-card {
-  background-color: #292929;
+  background-color: #202830;
   border-radius: 10px;
   padding: 15px;
   width: 300px;
@@ -90,9 +91,28 @@ body {
   margin-bottom: 5px;
 }
 
-.movie-genre,
 .movie-desc,
 .movie-rating {
   font-size: 14px;
   color: #cccccc;
+}
+
+.user-button {
+  background-color: #40bcf4;
+  color: #14181c;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 20px;
+  margin: 0 8px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 0 6px rgba(0, 255, 200, 0.4);
+}
+
+.user-button:hover {
+  background-color: #40bcf4;
+  color: white;
+  box-shadow: 0 0 10px rgba(0, 255, 200, 0.7);
 }

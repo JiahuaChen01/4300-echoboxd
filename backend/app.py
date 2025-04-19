@@ -43,8 +43,8 @@ with open("tmdb_5000_movies.json", "r", encoding="utf-8") as file2:
 app = Flask(__name__)
 CORS(app)
 
-def json_search(query1, query2, query3):
-    combined_query = f"{query1} {query2} {query3}".strip()
+def json_search(query1="", query2="", query3="", query4="", query5=""):
+    combined_query = f"{query1} {query2} {query3} {query4} {query5}".strip()
     query_tokens = sim.tokenize(combined_query)
 
     valid_df = reviews_df.dropna(subset=["review"]).copy()
@@ -143,9 +143,8 @@ def home():
 
 @app.route("/movies")
 def movie_search():
-    text1, text2, text3 = [request.args.get(
-        title) for title in ("title1", "title2", "title3")]
-    return json_search(text1, text2, text3)
+    titles = [request.args.get(f"title{i}", "") for i in range(1, 6)]
+    return json_search(*titles)
 
 if 'DB_NAME' not in os.environ:
     app.run(debug=True,host="0.0.0.0",port=5000)
