@@ -57,28 +57,29 @@ def similar_movies(movie:int, word_occurence_matrix:np.ndarray):
 #Args: string of starting query, string of target movie, insertion-cost function, deletion-cost function, substitution-cost function.
 def edit_distance(query: str, movie: str, ins_cost_func: int, del_cost_func: int, sub_cost_func: int) -> float:
     query = query.lower()
-    message = message.lower()
-    table = np.zeros((len(query)+1,len(message)+1))
+    movie = movie.lower()
+    table = np.zeros((len(query)+1,len(movie)+1))
     i = 1 
     for _ in query:
       table[i,0] = table[i-1,0] + del_cost_func(query, i)
       i+=1
     i = 1
-    for _ in message:
-      table[0,i] = table[0,i-1] + ins_cost_func(message, i)
+    for _ in movie:
+      table[0,i] = table[0,i-1] + ins_cost_func(movie, i)
       i+=1
     for i in range(1,len(query)+1):
-      for j in range(1,len(message)+1):
+      for j in range(1,len(movie)+1):
         table[i,j] = min(
           table[i-1,j] + del_cost_func(query, i),
-          table[i,j-1] + ins_cost_func(message, j),
-          table[i-1,j-1] + sub_cost_func(query, message, i, j),
+          table[i,j-1] + ins_cost_func(movie, j),
+          table[i-1,j-1] + sub_cost_func(query, movie, i, j),
         )
-    return table[len(query),len(message)]
+    return table[len(query),len(movie)]
 
 def ins_cost_func(query: str, i: int) -> int:
-  if query[i] == " ":
-    return 2
+  #starting a new word is more expensive
+  if query[i-1] == " ":
+    return 3
   else:
     return 1
   
