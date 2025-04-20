@@ -54,8 +54,8 @@ def similar_movies(movie:int, word_occurence_matrix:np.ndarray):
         np.sum(np.maximum(word_occurence_matrix[movie], word_occurence_matrix[other_movie])))
   return sorted(scores, key=lambda x: x[1], reverse=True)[:10]
 
-#Args: string of starting query, string of target movie, insertion-cost funciton, deletion-cost function, substitution-cost function.
-def edit_distance(query: str, movie: str, ins_cost_func: int, del_cost_func: int, sub_cost_func: int) -> int:
+#Args: string of starting query, string of target movie, insertion-cost function, deletion-cost function, substitution-cost function.
+def edit_distance(query: str, movie: str, ins_cost_func: int, del_cost_func: int, sub_cost_func: int) -> float:
     query = query.lower()
     message = message.lower()
     table = np.zeros((len(query)+1,len(message)+1))
@@ -76,14 +76,100 @@ def edit_distance(query: str, movie: str, ins_cost_func: int, del_cost_func: int
         )
     return table[len(query),len(message)]
 
-def ins_cost_func(string: str, i: int):
-  if string[i] == " ":
+def ins_cost_func(query: str, i: int) -> int:
+  if query[i] == " ":
     return 2
   else:
     return 1
   
-def del_cost_func(string: str, i: int):
+def del_cost_func(message: str, i: int) -> int:
   return 1
 
-def sub_cost_func(s1: str, s2: str, i: int, j: int):
-  return 1
+def sub_cost_func(s1: str, s2: str, i: int, j: int) -> float:
+  if(s1[i-1] == s2[j-1]):
+    return 1
+  elif(s1[i-1],s2[j-1]) or (s2[j-1],s1[i-1]) in adj_chars:
+    return 1.5
+  else:
+    return 2
+
+adj_chars = [
+    ("a", "q"),
+    ("a", "s"),
+    ("a", "z"),
+    ("b", "g"),
+    ("b", "m"),
+    ("b", "n"),
+    ("b", "v"),
+    ("c", "d"),
+    ("c", "v"),
+    ("c", "x"),
+    ("d", "c"),
+    ("d", "e"),
+    ("d", "f"),
+    ("d", "s"),
+    ("e", "d"),
+    ("e", "r"),
+    ("e", "w"),
+    ("f", "d"),
+    ("f", "g"),
+    ("f", "r"),
+    ("f", "v"),
+    ("g", "b"),
+    ("g", "f"),
+    ("g", "h"),
+    ("g", "t"),
+    ("h", "g"),
+    ("h", "j"),
+    ("h", "m"),
+    ("h", "n"),
+    ("h", "y"),
+    ("i", "k"),
+    ("i", "o"),
+    ("i", "u"),
+    ("j", "h"),
+    ("j", "k"),
+    ("j", "u"),
+    ("k", "i"),
+    ("k", "j"),
+    ("k", "l"),
+    ("l", "k"),
+    ("l", "o"),
+    ("m", "b"),
+    ("m", "h"),
+    ("n", "b"),
+    ("n", "h"),
+    ("o", "i"),
+    ("o", "l"),
+    ("o", "p"),
+    ("p", "o"),
+    ("q", "a"),
+    ("q", "w"),
+    ("r", "e"),
+    ("r", "f"),
+    ("r", "t"),
+    ("s", "a"),
+    ("s", "d"),
+    ("s", "w"),
+    ("s", "x"),
+    ("t", "g"),
+    ("t", "r"),
+    ("t", "y"),
+    ("u", "i"),
+    ("u", "j"),
+    ("u", "y"),
+    ("v", "b"),
+    ("v", "c"),
+    ("v", "f"),
+    ("w", "e"),
+    ("w", "q"),
+    ("w", "s"),
+    ("x", "c"),
+    ("x", "s"),
+    ("x", "z"),
+    ("y", "h"),
+    ("y", "t"),
+    ("y", "u"),
+    ("z", "a"),
+    ("z", "x"),
+]
