@@ -136,6 +136,8 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
     top.rename(columns={'review': 'description', 'rating': 'imdb_rating'}, inplace=True)
     top['title'] = top['title'].apply(lambda x: re.sub(r"\([0-9]{4}\)", "", x))
 
+    top.drop_duplicates(subset='title', keep='first')
+
     return top[['title', 'year', 'genre', 'description', 'imdb_rating']].to_json(orient='records', force_ascii=False)
 @app.route("/")
 def home():
