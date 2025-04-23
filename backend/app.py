@@ -61,12 +61,12 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
     movie_to_index = dict(enumerate(valid_df["title"]))
     index_to_movie = {i:t for t,i in movie_to_index.items()}
 
-    vectorizer = TfidfVectorizer(stop_words = 'english', max_df = .9,
-                            min_df = 1)
+    vectorizer = TfidfVectorizer(stop_words = 'english', max_df = .7,
+                            min_df = 2)
     td_matrix = vectorizer.fit_transform(valid_df["review"])
     print(td_matrix.shape)
 
-    docs_compressed, s, words_compressed = svds(td_matrix, k=40)
+    docs_compressed, s, words_compressed = svds(td_matrix, k=200)
     words_compressed = words_compressed.transpose()
 
     word_to_index = vectorizer.vocabulary_
@@ -88,44 +88,7 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
             else:
                 sims += docs_compressed_normed.dot(words_compressed_normed[word_to_index[word],:])
         return sims
-    """
-    # 1. generate tokens and term-doc matrix
-    all_doc_tokens = set()
-    for doc in docs:
-        all_doc_tokens.update(doc)
 
-    word_to_index = dict(enumerate(all_doc_tokens))
-    index_to_word = {v:k for (k,v) in word_to_index.items()}
-
-    term_doc_matrix = np.ones((len(doc_vecs), len(word_to_index)))
-    for i in range(len(term_doc_matrix)):
-        doc = doc_vecs[i]
-        for word in doc:
-            if word in word_to_index:
-                term_doc_matrix[i, word_to_index[word]] = doc[word]
-
-    # 2. apply SVD
-    u, s, v_trans = svds(term_doc_matrix, k=100)
-    words_compressed = v_trans.transpose()
-
-    from sklearn.preprocessing import normalize
-    words_compressed_normed = normalize(words_compressed, axis = 1)
-
-    td_matrix_np = td_matrix.transpose().toarray()
-    td_matrix_np = normalize(td_matrix_np)
-
-    mat_with_svd = np.dot(u, np.dot(s, v_trans))
-    """
-    
-    # 3. decompose back
-    """svd_doc_vecs = []
-    for doc_idx in range(len(mat_with_svd)):
-        new_doc = {}
-        for word_idx in range(len(mat_with_svd[0])):
-            if mat_with_svd[doc_idx, word_idx] > 0:
-                new_doc[index_to_word[word_idx]] = mat_with_svd[doc_idx, word_idx]
-        svd_doc_vecs.append(new_doc)
-    """
     scores = doc_scores_with_query(query_tokens)
     valid_df["score"] = scores
 
