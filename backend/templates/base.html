@@ -1,113 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Movie Night Recommender</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Kanit:wght@500&family=Montserrat&family=Open+Sans:wght@500&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div class="full-body-container">
-      <h1 class="title">EchoBoxd</h1>
 
-      <div class="input-container" id="input-container">
-        <div class="input-box">
-          <input
-            placeholder="User 1 - Enter a keyword..."
-            id="filter-text-val1"
-          />
-        </div>
-        <div class="input-box">
-          <input
-            placeholder="User 2 - Enter a keyword..."
-            id="filter-text-val2"
-          />
-        </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Movie Night Recommender</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Kanit:wght@500&family=Montserrat&family=Open+Sans:wght@500&display=swap"
+    rel="stylesheet" />
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+  <div class="full-body-container">
+    <h1 class="title">EchoBoxd</h1>
+
+    <div class="input-container" id="input-container">
+      <div class="input-box">
+        <input placeholder="User 1 - Enter a keyword..." id="filter-text-val1" />
       </div>
-
-      <div style="margin-bottom: 20px">
-        <button class="user-button" onclick="addUserInput()">+ Add User</button>
-        <button class="user-button" onclick="removeUserInput()">
-          − Remove User
-        </button>
+      <div class="input-box">
+        <input placeholder="User 2 - Enter a keyword..." id="filter-text-val2" />
       </div>
-
-      <button class="search-button" onclick="filterText()">
-        Get Recommendations
-      </button>
-
-      <div id="answer-box"></div>
     </div>
 
-    <script>
-      function answerBoxTemplate(movie) {
-        return `<div class='movie-card'>
-                <h3 class='movie-title'>${movie.title} (${
-          movie.year || "Unknown Year"
-        })</h3>
-                
-                <p class='movie-desc'>${
-                  movie.description || "No description available."
-                }</p>
-                <p class='movie-rating'><strong>IMDB Rating:</strong> ${
-                  movie.imdb_rating || "N/A"
-                }</p>
+    <div style="margin-bottom: 20px">
+      <button class="user-button" onclick="addUserInput()">+ Add User</button>
+      <button class="user-button" onclick="removeUserInput()">
+        − Remove User
+      </button>
+    </div>
+
+    <button class="search-button" onclick="filterText()">
+      Get Recommendations
+    </button>
+
+    <div id="answer-box"></div>
+  </div>
+
+  <script>
+    function answerBoxTemplate(movie, index) {
+      return `<div class='movie-card'>
+                <h3 class='movie-title'>${movie.title} (${movie.year || "Unknown Year"})</h3>
+                <p class='movie-desc'>${movie.description || "No description available."}</p>
+                <p class='movie-rating'><strong>IMDB Rating:</strong> ${movie.imdb_rating || "N/A"}</p>
+                <canvas id="chart-${index}" width="400" height="200"></canvas>
             </div>`;
-      }
+    }
 
-      function filterText() {
-        const params = new URLSearchParams();
-        for (let i = 1; i <= userCount; i++) {
-          const val = document.getElementById(`filter-text-val${i}`).value;
-          params.append(`title${i}`, val);
-        }
+    function renderCharts(data) {
+      data.forEach((movie, index) => {
+        if (!movie.user_scores || movie.user_scores.length === 0 || movie.user_scores.every(s => s === 0)) return;
 
-        fetch("/movies?" + params.toString())
-          .then((response) => response.json())
-          .then((data) => {
-            document.getElementById("answer-box").innerHTML = "";
-            if (data.length === 0) {
-              document.getElementById("answer-box").innerHTML =
-                "<p>No movies found.</p>";
-            } else {
-              data.forEach((movie) => {
-                let tempDiv = document.createElement("div");
-                tempDiv.innerHTML = answerBoxTemplate(movie);
-                document.getElementById("answer-box").appendChild(tempDiv);
-              });
+        const ctx = document.getElementById(`chart-${index}`).getContext("2d");
+
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: movie.user_scores.map((_, i) => `User ${i + 1}`),
+            datasets: [{
+              label: 'Similarity to User',
+              data: movie.user_scores,
+              backgroundColor: 'rgba(54, 162, 235, 0.5)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            scales: {
+              x: {
+                beginAtZero: true,
+                max: 1
+              }
+            },
+            plugins: {
+              legend: {
+                display: false
+              }
             }
-          });
+          }
+        });
+      });
+    }
+
+    function filterText() {
+      const params = new URLSearchParams();
+      for (let i = 1; i <= userCount; i++) {
+        const val = document.getElementById(`filter-text-val${i}`).value;
+        params.append(`title${i}`, val);
       }
 
-      let userCount = 2;
-      const maxUsers = 5;
-      const container = document.getElementById("input-container");
+      fetch("/movies?" + params.toString())
+        .then((response) => response.json())
+        .then((data) => {
+          const box = document.getElementById("answer-box");
+          box.innerHTML = "";
 
-      function addUserInput() {
-        if (userCount >= maxUsers) return;
+          if (data.length === 0) {
+            box.innerHTML = "<p>No movies found.</p>";
+          } else {
+            data.forEach((movie, index) => {
+              let tempDiv = document.createElement("div");
+              tempDiv.innerHTML = answerBoxTemplate(movie, index);
+              box.appendChild(tempDiv);
+            });
+            renderCharts(data);
+          }
+        });
+    }
 
-        userCount++;
-        const inputDiv = document.createElement("div");
-        inputDiv.className = "input-box";
-        inputDiv.innerHTML = `<input placeholder="User ${userCount} - Enter a keyword..." id="filter-text-val${userCount}" />`;
-        container.appendChild(inputDiv);
-      }
+    let userCount = 2;
+    const maxUsers = 5;
+    const container = document.getElementById("input-container");
 
-      function removeUserInput() {
-        if (userCount <= 2) return;
+    function addUserInput() {
+      if (userCount >= maxUsers) return;
 
-        container.removeChild(container.lastChild);
-        userCount--;
-      }
-    </script>
-  </body>
+      userCount++;
+      const inputDiv = document.createElement("div");
+      inputDiv.className = "input-box";
+      inputDiv.innerHTML = `<input placeholder="User ${userCount} - Enter a keyword..." id="filter-text-val${userCount}" />`;
+      container.appendChild(inputDiv);
+    }
+
+    function removeUserInput() {
+      if (userCount <= 2) return;
+
+      container.removeChild(container.lastChild);
+      userCount--;
+    }
+  </script>
+</body>
+
 </html>
