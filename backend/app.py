@@ -43,31 +43,33 @@ with open("tmdb_5000_movies.json", "r", encoding="utf-8") as file2:
 app = Flask(__name__)
 CORS(app)
 
+valid_df = reviews_df.dropna(subset=["review"]).copy()
+valid_df['toks'] = valid_df['review'].apply(sim.tokenize)
+docs = valid_df['toks'].tolist()
+idf = compute_idf(docs)
+doc_vecs = [compute_tf_idf(compute_tf(doc), idf) for doc in docs]
+review_to_index = dict(enumerate(valid_df["review"]))
+index_to_review = {i:t for t,i in review_to_index.items()}
+
+movie_to_index = dict(enumerate(valid_df["title"]))
+index_to_movie = {i:t for t,i in movie_to_index.items()}
+
+vectorizer = TfidfVectorizer(stop_words = 'english', max_df = .7,
+                            min_df = 2)
+td_matrix = vectorizer.fit_transform(valid_df["review"])
+docs_compressed, s, words_compressed = svds(td_matrix, k=200)
+words_compressed = words_compressed.transpose()
+
 def json_search(query1="", query2="", query3="", query4="", query5=""):
     combined_query = f"{query1} {query2} {query3} {query4} {query5}".strip()
     query_tokens = sim.tokenize(combined_query)
 
-    valid_df = reviews_df.dropna(subset=["review"]).copy()
-    valid_df['toks'] = valid_df['review'].apply(sim.tokenize)
+    
 
-    docs = valid_df['toks'].tolist()
-    idf = compute_idf(docs)
-    doc_vecs = [compute_tf_idf(compute_tf(doc), idf) for doc in docs]
+    
     query_vec = compute_tf_idf(compute_tf(query_tokens), idf)
 
-    review_to_index = dict(enumerate(valid_df["review"]))
-    index_to_review = {i:t for t,i in review_to_index.items()}
-
-    movie_to_index = dict(enumerate(valid_df["title"]))
-    index_to_movie = {i:t for t,i in movie_to_index.items()}
-
-    vectorizer = TfidfVectorizer(stop_words = 'english', max_df = .7,
-                            min_df = 2)
-    td_matrix = vectorizer.fit_transform(valid_df["review"])
-    print(td_matrix.shape)
-
-    docs_compressed, s, words_compressed = svds(td_matrix, k=200)
-    words_compressed = words_compressed.transpose()
+    
 
     word_to_index = vectorizer.vocabulary_
     index_to_word = {i:t for t,i in word_to_index.items()}
