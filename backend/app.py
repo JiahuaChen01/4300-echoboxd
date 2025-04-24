@@ -63,7 +63,21 @@ words_compressed = words_compressed.transpose()
 def json_search(query1="", query2="", query3="", query4="", query5=""):
     combined_query = f"{query1} {query2} {query3} {query4} {query5}".strip()
     query_tokens = sim.tokenize(combined_query)
-
+    updated_tokens = []
+    for q in query_tokens:
+        for toks in valid_df["toks"]:
+            min_dist = float("inf")
+            min_tok = None
+            for tok in toks:
+                dist = sim.edit_distance(q, tok)
+                if dist < min_dist:
+                    min_dist = dist
+                    min_tok = tok
+            if min_tok == q:
+                updated_tokens.append(q)
+            else:
+                updated_tokens.append(min_tok)
+    
     
 
     
