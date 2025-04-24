@@ -44,44 +44,93 @@
 
   <script>
     function answerBoxTemplate(movie, index) {
-      return `<div class='movie-card'>
-                <h3 class='movie-title'>${movie.title} (${movie.year || "Unknown Year"})</h3>
-                <p class='movie-desc'>${movie.description || "No description available."}</p>
-                <p class='movie-rating'><strong>IMDB Rating:</strong> ${movie.imdb_rating || "N/A"}</p>
-                <canvas id="chart-${index}" width="400" height="200"></canvas>
-            </div>`;
+      return `<div class='movie-card' id='movie-${index}'>
+            <h3 class='movie-title'>${movie.title} (${movie.year || "Unknown Year"})</h3>
+            <p class='movie-desc'>${movie.description || "No description available."}</p>
+            <p class='movie-rating'><strong>IMDB Rating:</strong> ${movie.imdb_rating || "N/A"}</p>
+          </div>`;
     }
 
     function renderCharts(data) {
-      data.forEach((movie, index) => {
-        if (!movie.user_scores || movie.user_scores.length === 0 || movie.user_scores.every(s => s === 0)) return;
+      const userColors = ['#4B9CD3', '#77DD77', '#FFB347', '#FF6961', '#B19CD9']; // consistent colors
 
-        const ctx = document.getElementById(`chart-${index}`).getContext("2d");
+      data.forEach((movie, index) => {
+        if (!movie.user_scores || movie.user_scores.length < 2) return;
+
+        const scores = movie.user_scores;
+        const total = scores.reduce((sum, val) => sum + val, 0);
+
+        const container = document.getElementById(`movie-${index}`);
+
+        // Create and insert the canvas element dynamically
+        const canvas = document.createElement('canvas');
+        canvas.id = `chart-${index}`;
+        canvas.width = 400;
+        canvas.height = 200;
+        container.appendChild(canvas);
+
+        const ctx = canvas.getContext("2d");
+
+        let chartData;
+
+        if (total === 0) {
+          // fallback gray bar
+          chartData = {
+            labels: ['No Match'],
+            datasets: [{
+              label: 'No meaningful similarity found',
+              data: [1],
+              backgroundColor: '#d3d3d3',
+              stack: 'stack1'
+            }]
+          };
+        } else {
+          const normalized = scores.map(s => s / total);
+
+          chartData = {
+            labels: ['Similarity Breakdown'],
+            datasets: normalized.map((val, i) => ({
+              label: `User ${i + 1}`,
+              data: [val],
+              backgroundColor: userColors[i % userColors.length],
+              stack: 'stack1'
+            }))
+          };
+        }
 
         new Chart(ctx, {
           type: 'bar',
-          data: {
-            labels: movie.user_scores.map((_, i) => `User ${i + 1}`),
-            datasets: [{
-              label: 'Similarity to User',
-              data: movie.user_scores,
-              backgroundColor: 'rgba(54, 162, 235, 0.5)',
-              borderColor: 'rgba(54, 162, 235, 1)',
-              borderWidth: 1
-            }]
-          },
+          data: chartData,
           options: {
             indexAxis: 'y',
             responsive: true,
-            scales: {
-              x: {
-                beginAtZero: true,
-                max: 1
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    const pct = (context.parsed.x * 100).toFixed(1);
+                    return `${context.dataset.label}: ${pct}%`;
+                  }
+                }
+              },
+              legend: {
+                display: true,
+                position: 'bottom'
               }
             },
-            plugins: {
-              legend: {
-                display: false
+            scales: {
+              x: {
+                stacked: true,
+                min: 0,
+                max: 1,
+                ticks: {
+                  callback: function (value) {
+                    return `${Math.round(value * 100)}%`;
+                  }
+                }
+              },
+              y: {
+                stacked: true
               }
             }
           }
