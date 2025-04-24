@@ -26,17 +26,22 @@ json_file_path = os.path.join(current_directory, 'init.json')
 with open("letterboxd_reviews.json", "r", encoding="utf-8") as file:
     movie_reviews = json.load(file)
     reviews_df = pd.DataFrame(movie_reviews)
+    joined_df = pd.DataFrame(movie_reviews)
+    joined_df.set_index('title')
 
 with open("metacritic-reviews.json", "r", encoding="utf-8") as file1:
     metacritic_summaries = json.load(file1)
     metacritic_df = pd.DataFrame(metacritic_summaries)
-    metacritic_df.rename(columns={'summary': 'review', 'User rating': 'rating', 'Movie name': 'title', 'Release Date': 'year'}, inplace=True)
+    metacritic_df.rename(columns={'Movie name': 'title'}, inplace=True)
+    joined_df = joined_df.merge(metacritic_df, on='title', how='outer')
+    metacritic_df.rename(columns={'summary': 'review', 'User rating': 'rating', 'Release Date': 'year'}, inplace=True)
     metacritic_df.drop(columns={'Rating', 'Website rating'})
     reviews_df = pd.concat([reviews_df, metacritic_df], ignore_index=True)
 
 with open("tmdb_5000_movies.json", "r", encoding="utf-8") as file2:
     tmdb_overviews = json.load(file2)
     tmdb_df = pd.DataFrame(tmdb_overviews)
+    joined_df = joined_df.merge(tmdb_df, on='title', how='outer')
     tmdb_df.rename(columns={'overview': 'review', 'release_date': 'year', 'vote_average': 'rating'}, inplace=True)
     tmdb_df.drop(columns={'keywords', 'original_title', 'tagline'})
     reviews_df = pd.concat([reviews_df, tmdb_df], ignore_index=True)
@@ -65,19 +70,19 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
     combined_query = f"{query1} {query2} {query3} {query4} {query5}".strip()
     query_tokens = sim.tokenize(combined_query)
     updated_tokens = []
-    for q in query_tokens:
-        for toks in valid_df["toks"]:
-            min_dist = float("inf")
-            min_tok = None
-            for tok in toks:
-                dist = sim.edit_distance(q, tok)
-                if dist < min_dist:
-                    min_dist = dist
-                    min_tok = tok
-            if min_tok == q:
-                updated_tokens.append(q)
-            else:
-                updated_tokens.append(min_tok)
+    # for q in query_tokens:
+    #     for toks in valid_df["toks"]:
+    #         min_dist = float("inf")
+    #         min_tok = None
+    #         for tok in toks:
+    #             dist = sim.edit_distance(q, tok)
+    #             if dist < min_dist:
+    #                 min_dist = dist
+    #                 min_tok = tok
+    #         if min_tok == q:
+    #             updated_tokens.append(q)
+    #         else:
+    #             updated_tokens.append(min_tok)
     
     
 
@@ -116,11 +121,36 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
     top.rename(columns={'review': 'description', 'rating': 'imdb_rating'}, inplace=True)
     top['title'] = top['title'].apply(lambda x: re.sub(r"\([0-9]{4}\)", "", x))
 
-    top.drop_duplicates(subset='title', keep='first')
     user_scores = get_user_similarities([query1, query2, query3, query4, query5], top['description'].tolist())
     top['user_scores'] = user_scores
 
-    return top[['title', 'year', 'genre', 'description', 'imdb_rating', 'user_scores']].to_json(orient='records', force_ascii=False)
+    top.drop_duplicates(subset=['title'], keep='first', inplace=True)
+
+    joined_top = joined_df[joined_df['title'].isin(top['title'])]
+    joined_top.fillna(value={"review": "No review available.", "summary": "No description available.", "overview": "No description available."}, inplace=True)
+
+    joined_top.drop_duplicates(subset=['title'], keep='first', inplace=True)
+
+    top['review'] = joined_top['review']
+
+    top.set_index('title', inplace=True)
+    joined_top.set_index('title', inplace=True)
+
+    print(joined_top)
+    print(top)
+
+    for index, row in top.iterrows():
+        print(joined_top.loc[index, 'summary'])
+        print(joined_top.loc[index, 'overview'])
+        if (row['description'] != joined_top.loc[index, 'summary']) and (row['description'] != joined_top.loc[index, 'overview']):
+            if joined_top.loc[index, 'overview'] != "No description available.":
+                top.at[index, 'description'] = joined_top.loc[index, 'overview']
+            else:
+                top.at[index, 'description'] = joined_top.loc[index, 'summary']
+
+    top.reset_index(inplace=True)
+
+    return top[['title', 'year', 'genre', 'description', 'review', 'imdb_rating', 'user_scores']].to_json(orient='records', force_ascii=False)
 
 @app.route("/")
 def home():
