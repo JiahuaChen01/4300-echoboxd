@@ -47,7 +47,8 @@
       return `<div class='movie-card' id='movie-${index}'>
             <h3 class='movie-title'>${movie.title} (${movie.year || "Unknown Year"})</h3>
             <p class='movie-desc'>${movie.description || "No description available."}</p>
-            <p class='movie-rating'><strong>IMDB Rating:</strong> ${movie.imdb_rating || "N/A"}</p>
+            <p class='movie-review'><strong>Review: </strong>${movie.review || "No review available."}</p>
+            <p class='movie-rating'><strong>Rating:</strong> ${movie.imdb_rating || "N/A"}</p>
           </div>`;
     }
 

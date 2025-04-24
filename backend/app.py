@@ -70,19 +70,19 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
     combined_query = f"{query1} {query2} {query3} {query4} {query5}".strip()
     query_tokens = sim.tokenize(combined_query)
     updated_tokens = []
-    # for q in query_tokens:
-    #     for toks in valid_df["toks"]:
-    #         min_dist = float("inf")
-    #         min_tok = None
-    #         for tok in toks:
-    #             dist = sim.edit_distance(q, tok)
-    #             if dist < min_dist:
-    #                 min_dist = dist
-    #                 min_tok = tok
-    #         if min_tok == q:
-    #             updated_tokens.append(q)
-    #         else:
-    #             updated_tokens.append(min_tok)
+    for q in query_tokens:
+        for toks in valid_df["toks"]:
+            min_dist = float("inf")
+            min_tok = None
+            for tok in toks:
+                dist = sim.edit_distance(q, tok)
+                if dist < min_dist:
+                    min_dist = dist
+                    min_tok = tok
+            if min_tok == q:
+                updated_tokens.append(q)
+            else:
+                updated_tokens.append(min_tok)
     
     
 
@@ -128,20 +128,16 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
 
     joined_top = joined_df[joined_df['title'].isin(top['title'])]
     joined_top.fillna(value={"review": "No review available.", "summary": "No description available.", "overview": "No description available."}, inplace=True)
-
     joined_top.drop_duplicates(subset=['title'], keep='first', inplace=True)
-
-    top['review'] = joined_top['review']
 
     top.set_index('title', inplace=True)
     joined_top.set_index('title', inplace=True)
 
-    print(joined_top)
-    print(top)
+    top = pd.concat([top, joined_top['review']], axis=1)
 
     for index, row in top.iterrows():
-        print(joined_top.loc[index, 'summary'])
-        print(joined_top.loc[index, 'overview'])
+        if (row['description'] in joined_df['review'].values):
+            top.at[index, 'review'] = row['description']
         if (row['description'] != joined_top.loc[index, 'summary']) and (row['description'] != joined_top.loc[index, 'overview']):
             if joined_top.loc[index, 'overview'] != "No description available.":
                 top.at[index, 'description'] = joined_top.loc[index, 'overview']
