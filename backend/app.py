@@ -4,6 +4,7 @@ from flask import Flask, render_template, request
 from flask_cors import CORS
 from helpers.MySQLDatabaseHandler import MySQLDatabaseHandler
 import similarity as sim
+from stats import get_user_similarities
 import pandas as pd
 import re
 from tfidf_utils import compute_tf, compute_idf, compute_tf_idf, cosine_similarity
@@ -115,7 +116,11 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
     top.rename(columns={'review': 'description', 'rating': 'imdb_rating'}, inplace=True)
     top['title'] = top['title'].apply(lambda x: re.sub(r"\([0-9]{4}\)", "", x))
 
-    return top[['title', 'year', 'genre', 'description', 'imdb_rating']].to_json(orient='records', force_ascii=False)
+    user_scores = get_user_similarities([query1, query2, query3, query4, query5], top['description'].tolist())
+    top['user_scores'] = user_scores
+
+    return top[['title', 'year', 'genre', 'description', 'imdb_rating', 'user_scores']].to_json(orient='records', force_ascii=False)
+
 @app.route("/")
 def home():
     return render_template('base.html',title="sample html")
