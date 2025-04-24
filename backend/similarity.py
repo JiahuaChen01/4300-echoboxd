@@ -54,8 +54,29 @@ def similar_movies(movie:int, word_occurence_matrix:np.ndarray):
         np.sum(np.maximum(word_occurence_matrix[movie], word_occurence_matrix[other_movie])))
   return sorted(scores, key=lambda x: x[1], reverse=True)[:10]
 
+def default_ins_cost_func(query: str, i: int) -> int:
+  return 1
+  """
+  #starting a new word is more expensive
+  if query[i-1] == " ":
+    return 2
+  else:
+    return 1
+  """
+  
+def default_del_cost_func(message: str, i: int) -> int:
+  return 1
+
+def default_sub_cost_func(s1: str, s2: str, i: int, j: int) -> float:
+  if(s1[i-1] == s2[j-1]):
+    return 1
+  elif(s1[i-1],s2[j-1]) or (s2[j-1],s1[i-1]) in adj_chars:
+    return 1.5
+  else:
+    return 2
+  
 #Args: string of starting query, string of target movie, insertion-cost function, deletion-cost function, substitution-cost function.
-def edit_distance(query: str, movie: str, ins_cost_func: int, del_cost_func: int, sub_cost_func: int) -> float:
+def edit_distance(query: str, movie: str, ins_cost_func=default_ins_cost_func, del_cost_func=default_del_cost_func, sub_cost_func=default_sub_cost_func) -> float:
     query = query.lower()
     movie = movie.lower()
     table = np.zeros((len(query)+1,len(movie)+1))
@@ -76,23 +97,6 @@ def edit_distance(query: str, movie: str, ins_cost_func: int, del_cost_func: int
         )
     return table[len(query),len(movie)]
 
-def ins_cost_func(query: str, i: int) -> int:
-  #starting a new word is more expensive
-  if query[i-1] == " ":
-    return 3
-  else:
-    return 1
-  
-def del_cost_func(message: str, i: int) -> int:
-  return 1
-
-def sub_cost_func(s1: str, s2: str, i: int, j: int) -> float:
-  if(s1[i-1] == s2[j-1]):
-    return 1
-  elif(s1[i-1],s2[j-1]) or (s2[j-1],s1[i-1]) in adj_chars:
-    return 1.5
-  else:
-    return 2
 
 adj_chars = [
     ("a", "q"),

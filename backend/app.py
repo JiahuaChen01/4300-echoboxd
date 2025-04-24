@@ -4,6 +4,7 @@ from flask import Flask, render_template, request
 from flask_cors import CORS
 from helpers.MySQLDatabaseHandler import MySQLDatabaseHandler
 import similarity as sim
+from stats import get_user_similarities
 import pandas as pd
 import re
 from tfidf_utils import compute_tf, compute_idf, compute_tf_idf, cosine_similarity
@@ -43,31 +44,47 @@ with open("tmdb_5000_movies.json", "r", encoding="utf-8") as file2:
 app = Flask(__name__)
 CORS(app)
 
+valid_df = reviews_df.dropna(subset=["review"]).copy()
+valid_df['toks'] = valid_df['review'].apply(sim.tokenize)
+docs = valid_df['toks'].tolist()
+idf = compute_idf(docs)
+doc_vecs = [compute_tf_idf(compute_tf(doc), idf) for doc in docs]
+review_to_index = dict(enumerate(valid_df["review"]))
+index_to_review = {i:t for t,i in review_to_index.items()}
+
+movie_to_index = dict(enumerate(valid_df["title"]))
+index_to_movie = {i:t for t,i in movie_to_index.items()}
+
+vectorizer = TfidfVectorizer(stop_words = 'english', max_df = .7,
+                            min_df = 2)
+td_matrix = vectorizer.fit_transform(valid_df["review"])
+docs_compressed, s, words_compressed = svds(td_matrix, k=200)
+words_compressed = words_compressed.transpose()
+
 def json_search(query1="", query2="", query3="", query4="", query5=""):
     combined_query = f"{query1} {query2} {query3} {query4} {query5}".strip()
     query_tokens = sim.tokenize(combined_query)
+    updated_tokens = []
+    for q in query_tokens:
+        for toks in valid_df["toks"]:
+            min_dist = float("inf")
+            min_tok = None
+            for tok in toks:
+                dist = sim.edit_distance(q, tok)
+                if dist < min_dist:
+                    min_dist = dist
+                    min_tok = tok
+            if min_tok == q:
+                updated_tokens.append(q)
+            else:
+                updated_tokens.append(min_tok)
+    
+    
 
-    valid_df = reviews_df.dropna(subset=["review"]).copy()
-    valid_df['toks'] = valid_df['review'].apply(sim.tokenize)
-
-    docs = valid_df['toks'].tolist()
-    idf = compute_idf(docs)
-    doc_vecs = [compute_tf_idf(compute_tf(doc), idf) for doc in docs]
+    
     query_vec = compute_tf_idf(compute_tf(query_tokens), idf)
 
-    review_to_index = dict(enumerate(valid_df["review"]))
-    index_to_review = {i:t for t,i in review_to_index.items()}
-
-    movie_to_index = dict(enumerate(valid_df["title"]))
-    index_to_movie = {i:t for t,i in movie_to_index.items()}
-
-    vectorizer = TfidfVectorizer(stop_words = 'english', max_df = .9,
-                            min_df = 1)
-    td_matrix = vectorizer.fit_transform(valid_df["review"])
-    print(td_matrix.shape)
-
-    docs_compressed, s, words_compressed = svds(td_matrix, k=40)
-    words_compressed = words_compressed.transpose()
+    
 
     word_to_index = vectorizer.vocabulary_
     index_to_word = {i:t for t,i in word_to_index.items()}
@@ -88,44 +105,7 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
             else:
                 sims += docs_compressed_normed.dot(words_compressed_normed[word_to_index[word],:])
         return sims
-    """
-    # 1. generate tokens and term-doc matrix
-    all_doc_tokens = set()
-    for doc in docs:
-        all_doc_tokens.update(doc)
 
-    word_to_index = dict(enumerate(all_doc_tokens))
-    index_to_word = {v:k for (k,v) in word_to_index.items()}
-
-    term_doc_matrix = np.ones((len(doc_vecs), len(word_to_index)))
-    for i in range(len(term_doc_matrix)):
-        doc = doc_vecs[i]
-        for word in doc:
-            if word in word_to_index:
-                term_doc_matrix[i, word_to_index[word]] = doc[word]
-
-    # 2. apply SVD
-    u, s, v_trans = svds(term_doc_matrix, k=100)
-    words_compressed = v_trans.transpose()
-
-    from sklearn.preprocessing import normalize
-    words_compressed_normed = normalize(words_compressed, axis = 1)
-
-    td_matrix_np = td_matrix.transpose().toarray()
-    td_matrix_np = normalize(td_matrix_np)
-
-    mat_with_svd = np.dot(u, np.dot(s, v_trans))
-    """
-    
-    # 3. decompose back
-    """svd_doc_vecs = []
-    for doc_idx in range(len(mat_with_svd)):
-        new_doc = {}
-        for word_idx in range(len(mat_with_svd[0])):
-            if mat_with_svd[doc_idx, word_idx] > 0:
-                new_doc[index_to_word[word_idx]] = mat_with_svd[doc_idx, word_idx]
-        svd_doc_vecs.append(new_doc)
-    """
     scores = doc_scores_with_query(query_tokens)
     valid_df["score"] = scores
 
@@ -137,8 +117,11 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
     top['title'] = top['title'].apply(lambda x: re.sub(r"\([0-9]{4}\)", "", x))
 
     top.drop_duplicates(subset='title', keep='first')
+    user_scores = get_user_similarities([query1, query2, query3, query4, query5], top['description'].tolist())
+    top['user_scores'] = user_scores
 
-    return top[['title', 'year', 'genre', 'description', 'imdb_rating']].to_json(orient='records', force_ascii=False)
+    return top[['title', 'year', 'genre', 'description', 'imdb_rating', 'user_scores']].to_json(orient='records', force_ascii=False)
+
 @app.route("/")
 def home():
     return render_template('base.html',title="sample html")
