@@ -30,7 +30,7 @@
 
     <div style="margin-bottom: 20px">
       <button class="user-button" onclick="addUserInput()">+ Add User</button>
-      <button class="user-button" onclick="removeUserInput()">
+      <button class="user-button" onclick="removeUserInput()" id="remove-btn">
         − Remove User
       </button>
     </div>
@@ -45,15 +45,25 @@
   <script>
     function answerBoxTemplate(movie, index) {
       return `<div class='movie-card' id='movie-${index}'>
-            <h3 class='movie-title'>${movie.title} (${movie.year || "Unknown Year"})</h3>
-            <p class='movie-desc'>${movie.description || "No description available."}</p>
-            <p class='movie-review'><strong>Review: </strong>${movie.review || "No review available."}</p>
-            <p class='movie-rating'><strong>Rating:</strong> ${movie.imdb_rating || "N/A"}</p>
-          </div>`;
+                  <h3 class='movie-title'>${movie.title} (${movie.year || "Unknown Year"
+        })</h3>
+                  <p class='movie-desc'>${movie.description || "No description available."
+        }</p>
+                  <p class='movie-review'><strong>Review: </strong>${movie.review || "No review available."
+        }</p>
+                  <p class='movie-rating'><strong>IMDB Rating:</strong> ${movie.imdb_rating || "N/A"
+        }</p>
+                </div>`;
     }
 
     function renderCharts(data) {
-      const userColors = ['#4B9CD3', '#77DD77', '#FFB347', '#FF6961', '#B19CD9']; // consistent colors
+      const userColors = [
+        "#4B9CD3",
+        "#77DD77",
+        "#FFB347",
+        "#FF6961",
+        "#B19CD9",
+      ]; // consistent colors
 
       data.forEach((movie, index) => {
         if (!movie.user_scores || movie.user_scores.length < 2) return;
@@ -64,7 +74,7 @@
         const container = document.getElementById(`movie-${index}`);
 
         // Create and insert the canvas element dynamically
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         canvas.id = `chart-${index}`;
         canvas.width = 400;
         canvas.height = 200;
@@ -77,33 +87,35 @@
         if (total === 0) {
           // fallback gray bar
           chartData = {
-            labels: ['No Match'],
-            datasets: [{
-              label: 'No meaningful similarity found',
-              data: [1],
-              backgroundColor: '#d3d3d3',
-              stack: 'stack1'
-            }]
+            labels: ["No Match"],
+            datasets: [
+              {
+                label: "No meaningful similarity found",
+                data: [1],
+                backgroundColor: "#d3d3d3",
+                stack: "stack1",
+              },
+            ],
           };
         } else {
-          const normalized = scores.map(s => s / total);
+          const normalized = scores.map((s) => s / total);
 
           chartData = {
-            labels: ['Similarity Breakdown'],
+            labels: ["Similarity Breakdown"],
             datasets: normalized.map((val, i) => ({
               label: `User ${i + 1}`,
               data: [val],
               backgroundColor: userColors[i % userColors.length],
-              stack: 'stack1'
-            }))
+              stack: "stack1",
+            })),
           };
         }
 
         new Chart(ctx, {
-          type: 'bar',
+          type: "bar",
           data: chartData,
           options: {
-            indexAxis: 'y',
+            indexAxis: "y",
             responsive: true,
             plugins: {
               tooltip: {
@@ -111,13 +123,13 @@
                   label: function (context) {
                     const pct = (context.parsed.x * 100).toFixed(1);
                     return `${context.dataset.label}: ${pct}%`;
-                  }
-                }
+                  },
+                },
               },
               legend: {
                 display: true,
-                position: 'bottom'
-              }
+                position: "bottom",
+              },
             },
             scales: {
               x: {
@@ -127,14 +139,14 @@
                 ticks: {
                   callback: function (value) {
                     return `${Math.round(value * 100)}%`;
-                  }
-                }
+                  },
+                },
               },
               y: {
-                stacked: true
-              }
-            }
-          }
+                stacked: true,
+              },
+            },
+          },
         });
       });
     }
@@ -168,6 +180,14 @@
     let userCount = 2;
     const maxUsers = 5;
     const container = document.getElementById("input-container");
+    const removeBtn = document.getElementById("remove-btn");
+
+    function updateRemoveButtonVisibility() {
+      removeBtn.style.display = userCount > 2 ? "inline-block" : "none";
+    }
+
+    // Initial visibility check
+    updateRemoveButtonVisibility();
 
     function addUserInput() {
       if (userCount >= maxUsers) return;
@@ -177,6 +197,8 @@
       inputDiv.className = "input-box";
       inputDiv.innerHTML = `<input placeholder="User ${userCount} - Enter a keyword..." id="filter-text-val${userCount}" />`;
       container.appendChild(inputDiv);
+
+      updateRemoveButtonVisibility();
     }
 
     function removeUserInput() {
@@ -184,6 +206,8 @@
 
       container.removeChild(container.lastChild);
       userCount--;
+
+      updateRemoveButtonVisibility();
     }
   </script>
 </body>
