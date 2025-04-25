@@ -67,7 +67,7 @@ def default_ins_cost_func(query: str, i: int) -> int:
 def default_del_cost_func(message: str, i: int) -> int:
   return 1
 
-def default_sub_cost_func(s1: str, s2: str, i: int, j: int) -> float:
+def default_sub_cost_func(s1: str, s2: str, i: int, j: int) -> int:
   if(s1[i-1] == s2[j-1]):
     return 0
   elif(s1[i-1],s2[j-1]) or (s2[j-1],s1[i-1]) in adj_chars:
@@ -76,7 +76,7 @@ def default_sub_cost_func(s1: str, s2: str, i: int, j: int) -> float:
     return 2
   
 #Args: string of starting query, string of target movie, insertion-cost function, deletion-cost function, substitution-cost function.
-def edit_distance(query: str, movie: str, ins_cost_func=default_ins_cost_func, del_cost_func=default_del_cost_func, sub_cost_func=default_sub_cost_func) -> float:
+def edit_distance(query: str, movie: str, ins_cost_func=default_ins_cost_func, del_cost_func=default_del_cost_func, sub_cost_func=default_sub_cost_func) -> int:
     query = query.lower()
     movie = movie.lower()
     table = np.zeros((len(query)+1,len(movie)+1))
