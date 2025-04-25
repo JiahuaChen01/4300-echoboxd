@@ -52,6 +52,8 @@ CORS(app)
 valid_df = reviews_df.dropna(subset=["review"]).copy()
 valid_df['toks'] = valid_df['review'].apply(sim.tokenize)
 docs = valid_df['toks'].tolist()
+valid_df["length"] = valid_df["toks"].apply(lambda x: len(x))
+valid_df = valid_df[valid_df["length"] >= 12]
 idf = compute_idf(docs)
 doc_vecs = [compute_tf_idf(compute_tf(doc), idf) for doc in docs]
 review_to_index = dict(enumerate(valid_df["review"]))
@@ -60,10 +62,10 @@ index_to_review = {i:t for t,i in review_to_index.items()}
 movie_to_index = dict(enumerate(valid_df["title"]))
 index_to_movie = {i:t for t,i in movie_to_index.items()}
 
-vectorizer = TfidfVectorizer(stop_words = 'english', max_df = .7,
-                            min_df = 2)
+vectorizer = TfidfVectorizer(stop_words = 'english', max_df = .3,
+                            min_df = 1)
 td_matrix = vectorizer.fit_transform(valid_df["review"])
-docs_compressed, s, words_compressed = svds(td_matrix, k=200)
+docs_compressed, s, words_compressed = svds(td_matrix, k=80)
 words_compressed = words_compressed.transpose()
 
 def json_search(query1="", query2="", query3="", query4="", query5=""):
@@ -71,18 +73,19 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
     query_tokens = sim.tokenize(combined_query)
     updated_tokens = []
     for q in query_tokens:
-        for toks in valid_df["toks"]:
-            min_dist = float("inf")
-            min_tok = None
-            for tok in toks:
-                dist = sim.edit_distance(q, tok)
-                if dist < min_dist:
-                    min_dist = dist
-                    min_tok = tok
-            if min_tok == q:
-                updated_tokens.append(q)
-            else:
-                updated_tokens.append(min_tok)
+        if q in vectorizer.vocabulary_:
+            updated_tokens.append(q)
+            continue
+        min_dist = float("inf")
+        min_tok = q
+        for tok in vectorizer.vocabulary_:
+            dist = sim.edit_distance(q, tok)
+            if dist < min_dist:
+                min_dist = dist
+                min_tok = tok
+        updated_tokens.append(min_tok)
+    
+    query_tokens = updated_tokens
     
     
 
@@ -101,28 +104,37 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
 
     def doc_scores_with_query(words_in, k = 5):
         sims = np.zeros((docs_compressed_normed.shape[0], words_compressed_normed.shape[1]))
+        # I apologize for how badly this function is written
+        index = 0
         for word in words_in:
             if word not in word_to_index:
                 continue
             # fix this later
             if np.sum(sims) == 0:
                 sims = docs_compressed_normed.dot(words_compressed_normed[word_to_index[word],:])
+                first_user = docs_compressed_normed.dot(words_compressed_normed[word_to_index[word],:])
+                user_results = np.zeros((len(words_in), len(first_user)))
+                user_results[0] = first_user
             else:
                 sims += docs_compressed_normed.dot(words_compressed_normed[word_to_index[word],:])
-        return sims
+                user_results[index] = docs_compressed_normed.dot(words_compressed_normed[word_to_index[word],:])
+            index += 1
+        return sims, normalize(user_results.T, axis=0)
 
-    scores = doc_scores_with_query(query_tokens)
+    scores, user_scores = doc_scores_with_query(query_tokens)
     valid_df["score"] = scores
 
-    top = valid_df.sort_values('score', ascending=False).head(10).copy()
+    valid_df['user_score'] = np.prod(user_scores, axis=1)
+    valid_df['user_scores'] = list(user_scores)
+    valid_df["composite_score"] = valid_df["score"] * valid_df["user_score"]
 
+    top = valid_df.sort_values('composite_score', ascending=False).head(10).copy()
     if 'genre' not in top.columns:
         top['genre'] = "Unknown"
+
     top.rename(columns={'review': 'description', 'rating': 'imdb_rating'}, inplace=True)
     top['title'] = top['title'].apply(lambda x: re.sub(r"\([0-9]{4}\)", "", x))
 
-    user_scores = get_user_similarities([query1, query2, query3, query4, query5], top['description'].tolist())
-    top['user_scores'] = user_scores
 
     top.drop_duplicates(subset=['title'], keep='first', inplace=True)
 
