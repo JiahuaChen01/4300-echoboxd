@@ -70,19 +70,34 @@ words_compressed = words_compressed.transpose()
 
 def json_search(query1="", query2="", query3="", query4="", query5=""):
     combined_query = f"{query1} {query2} {query3} {query4} {query5}".strip()
-    query_tokens = sim.tokenize(combined_query)
+    query_tokens = []
+    tokens_by_user = []
+    token_user_dict = {}
+    idx = 1
+    num_users = 0
+    for q in (query1, query2, query3, query4, query5):
+        if q == "":
+            continue
+        num_users += 1
+        tokens = sim.tokenize(q)
+        tokens_by_user.append(tokens)
+        query_tokens.extend(tokens)
+        #token_user_dict.update({"user" + str(idx) : [token for token in tokens})
+
     updated_tokens = []
     for q in query_tokens:
-        if q in vectorizer.vocabulary_:
+        if q in vectorizer.vocabulary_ or len(q) >= 10:
             updated_tokens.append(q)
             continue
         min_dist = float("inf")
         min_tok = q
         for tok in vectorizer.vocabulary_:
             dist = sim.edit_distance(q, tok)
-            if dist < min_dist:
+            if dist < min_dist and dist != -1:
                 min_dist = dist
                 min_tok = tok
+                if dist <= 3: # good enough
+                    break
         updated_tokens.append(min_tok)
     
     query_tokens = updated_tokens
@@ -102,7 +117,7 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
 
     docs_compressed_normed = normalize(docs_compressed)
 
-    def doc_scores_with_query(words_in, k = 5):
+    def doc_scores_with_query(words_in, words_by_user, num_users):
         sims = np.zeros((docs_compressed_normed.shape[0], words_compressed_normed.shape[1]))
         # I apologize for how badly this function is written
         index = 0
@@ -119,9 +134,19 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
                 sims += docs_compressed_normed.dot(words_compressed_normed[word_to_index[word],:])
                 user_results[index] = docs_compressed_normed.dot(words_compressed_normed[word_to_index[word],:])
             index += 1
-        return sims, normalize(user_results.T, axis=0)
+        # TODO: condense user results to be for users, not word by word
+        actual_user_results = np.zeros((num_users, user_results.shape[1]))
+        word_idx = 0
+        user_idx = 0
+        for user in words_by_user:
+            for i in range(len(user)):
+                actual_user_results[user_idx] += user_results[word_idx] / len(user)
+                word_idx += 1
+            user_idx += 1
+            
+        return sims, normalize(actual_user_results.T, axis=0)
 
-    scores, user_scores = doc_scores_with_query(query_tokens)
+    scores, user_scores = doc_scores_with_query(query_tokens, tokens_by_user, num_users)
     valid_df["score"] = scores
 
     valid_df['user_score'] = np.prod(user_scores, axis=1)
@@ -150,12 +175,14 @@ def json_search(query1="", query2="", query3="", query4="", query5=""):
     for index, row in top.iterrows():
         if (row['description'] in joined_df['review'].values):
             top.at[index, 'review'] = row['description']
-        if (row['description'] != joined_top.loc[index, 'summary']) and (row['description'] != joined_top.loc[index, 'overview']):
-            if joined_top.loc[index, 'overview'] != "No description available.":
-                top.at[index, 'description'] = joined_top.loc[index, 'overview']
-            else:
-                top.at[index, 'description'] = joined_top.loc[index, 'summary']
-
+        try:
+            if (row['description'] != joined_top.loc[index, 'summary']) and (row['description'] != joined_top.loc[index, 'overview']):
+                if joined_top.loc[index, 'overview'] != "No description available.":
+                    top.at[index, 'description'] = joined_top.loc[index, 'overview']
+                else:
+                    top.at[index, 'description'] = joined_top.loc[index, 'summary']
+        except:
+            print("It happened")
     top.reset_index(inplace=True)
 
     return top[['title', 'year', 'genre', 'description', 'review', 'imdb_rating', 'user_scores']].to_json(orient='records', force_ascii=False)

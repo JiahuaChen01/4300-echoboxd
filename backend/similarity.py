@@ -69,9 +69,9 @@ def default_del_cost_func(message: str, i: int) -> int:
 
 def default_sub_cost_func(s1: str, s2: str, i: int, j: int) -> float:
   if(s1[i-1] == s2[j-1]):
-    return 1
+    return 0
   elif(s1[i-1],s2[j-1]) or (s2[j-1],s1[i-1]) in adj_chars:
-    return 1.5
+    return 1
   else:
     return 2
   
@@ -89,12 +89,15 @@ def edit_distance(query: str, movie: str, ins_cost_func=default_ins_cost_func, d
       table[0,i] = table[0,i-1] + ins_cost_func(movie, i)
       i+=1
     for i in range(1,len(query)+1):
-      for j in range(1,len(movie)+1):
-        table[i,j] = min(
-          table[i-1,j] + del_cost_func(query, i),
-          table[i,j-1] + ins_cost_func(movie, j),
-          table[i-1,j-1] + sub_cost_func(query, movie, i, j),
-        )
+        for j in range(1,len(movie)+1):
+            temp = (
+                table[i-1,j] + del_cost_func(query, i),
+                table[i,j-1] + ins_cost_func(movie, j),
+                table[i-1,j-1] + sub_cost_func(query, movie, i, j),
+            )
+            table[i,j] = min(temp)
+        if np.min(table[i]) > 5:
+            return -1
     return table[len(query),len(movie)]
 
 
